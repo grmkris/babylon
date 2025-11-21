@@ -113,7 +113,8 @@ export function ComingSoon() {
     // Open Farcaster protocol authentication popup
     // Uses Sign In with Farcaster (SIWF) via official protocol endpoint (farcaster.xyz)
     const state = `${dbUser.id}:${Date.now()}:${Math.random().toString(36).substring(7)}`
-    const authUrl = `https://farcaster.xyz/~/sign-in-with-farcaster?channelToken=${state}`
+    // URL encode the channelToken to ensure special characters are properly handled
+    const authUrl = `https://farcaster.xyz/~/sign-in-with-farcaster?channelToken=${encodeURIComponent(state)}`
     
     const width = 600
     const height = 700

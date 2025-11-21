@@ -38,7 +38,8 @@ export async function openFarcasterOnboardingPopup(
     // Build Farcaster protocol auth URL using official protocol endpoint
     // Uses farcaster.xyz (protocol domain) instead of warpcast.com (client domain)
     // The channelToken parameter is used for the Sign In with Farcaster flow
-    const authUrl = `https://farcaster.xyz/~/sign-in-with-farcaster?channelToken=${state}`
+    // URL encode the channelToken to ensure special characters are properly handled
+    const authUrl = `https://farcaster.xyz/~/sign-in-with-farcaster?channelToken=${encodeURIComponent(state)}`
     
     // Open popup
     const width = 500
