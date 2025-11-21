@@ -195,7 +195,15 @@ export function ComingSoon() {
               toast.success('Farcaster account linked successfully!')
             }
           } else {
-            toast.error(data.error || 'Failed to link Farcaster account')
+            // Show specific error message for 409 conflicts
+            const errorMessage = data.error || 'Failed to link Farcaster account'
+            if (response.status === 409) {
+              toast.error(errorMessage.includes('already linked') 
+                ? errorMessage 
+                : 'This Farcaster account is already linked to another user')
+            } else {
+              toast.error(errorMessage)
+            }
           }
         } catch (error) {
           logger.error('Error linking Farcaster account', {

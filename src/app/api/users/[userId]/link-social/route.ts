@@ -121,6 +121,8 @@ export const POST = withErrorHandling(async (
       hasFarcaster: true,
       hasTwitter: true,
       walletAddress: true,
+      farcasterFid: true,
+      twitterId: true,
     },
   });
 
@@ -133,9 +135,35 @@ export const POST = withErrorHandling(async (
   switch (platform) {
     case 'farcaster':
       alreadyLinked = user.hasFarcaster;
+      // Check if Farcaster username is already linked to another user
+      if (username && !alreadyLinked) {
+        const existingFarcasterUser = await prisma.user.findFirst({
+          where: {
+            farcasterUsername: username,
+            id: { not: canonicalUserId },
+          },
+          select: { id: true },
+        });
+        if (existingFarcasterUser) {
+          throw new ConflictError('Farcaster account already linked to another user', 'User.farcasterUsername');
+        }
+      }
       break;
     case 'twitter':
       alreadyLinked = user.hasTwitter;
+      // Check if Twitter account is already linked to another user
+      if (username && !alreadyLinked) {
+        const existingTwitterUser = await prisma.user.findFirst({
+          where: {
+            twitterUsername: username,
+            id: { not: canonicalUserId },
+          },
+          select: { id: true },
+        });
+        if (existingTwitterUser) {
+          throw new ConflictError('Twitter account already linked to another user', 'User.twitterUsername');
+        }
+      }
       break;
     case 'wallet':
       alreadyLinked = !!user.walletAddress;
