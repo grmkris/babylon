@@ -345,64 +345,6 @@ export class WaitlistService {
   }
 
   /**
-   * Award bonus points for email verification
-   */
-  static async awardEmailBonus(userId: string, email: string): Promise<boolean> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        pointsAwardedForEmail: true,
-        reputationPoints: true,
-        bonusPoints: true,
-      },
-    })
-
-    if (!user) {
-      return false
-    }
-
-    // Don't award if already awarded
-    if (user.pointsAwardedForEmail) {
-      return false
-    }
-
-    const bonusAmount = 25
-    const newBonusPoints = user.bonusPoints + bonusAmount
-    const newReputationPoints = user.reputationPoints + bonusAmount
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        email,
-        emailVerified: true,
-        pointsAwardedForEmail: true,
-        bonusPoints: newBonusPoints,
-        reputationPoints: newReputationPoints,
-      },
-    })
-
-    // Create points transaction
-    await prisma.pointsTransaction.create({
-      data: {
-        id: await generateSnowflakeId(),
-        userId,
-        amount: bonusAmount,
-        pointsBefore: user.reputationPoints,
-        pointsAfter: newReputationPoints,
-        reason: 'email_verification',
-        metadata: JSON.stringify({ email }),
-      },
-    })
-
-    logger.info(`Awarded email bonus to user ${userId}`, {
-      userId,
-      bonusAmount,
-    }, 'WaitlistService')
-
-    return true
-  }
-
-  /**
    * Award bonus points for wallet connection
    */
   static async awardWalletBonus(userId: string, walletAddress: string): Promise<boolean> {

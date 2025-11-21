@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import { usePrivy } from '@privy-io/react-auth'
-import { Copy, Check, Mail, Wallet, X, TrendingUp, Gift, ChevronDown, ChevronLeft, ChevronRight, Link2, User } from 'lucide-react'
+import { Copy, Check, Wallet, X, TrendingUp, Gift, ChevronDown, ChevronLeft, ChevronRight, Link2, User } from 'lucide-react'
 import { logger } from '@/lib/logger'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -72,11 +72,8 @@ export function ComingSoon() {
   const { user: dbUser, refresh, getAccessToken } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [isLoading, setIsLoading] = useState(false)
   const [waitlistData, setWaitlistData] = useState<WaitlistData | null>(null)
   const [copiedCode, setCopiedCode] = useState(false)
-  const [emailInput, setEmailInput] = useState('')
-  const [showEmailModal, setShowEmailModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showLinkSocialModal, setShowLinkSocialModal] = useState(false)
   const [previousRank, setPreviousRank] = useState<number | null>(null)
@@ -291,12 +288,6 @@ export function ComingSoon() {
         await fetchWaitlistPosition(userId)
 
         // Award bonuses if available
-        const googleEmail = privyUser && 'google' in privyUser ? (privyUser as { google?: { email?: string } }).google?.email : undefined
-        const emailFromOAuth = privyUser?.email?.address || googleEmail
-        if (emailFromOAuth) {
-          await awardEmailBonus(userId, emailFromOAuth)
-        }
-
         const walletAddress = privyUser?.wallet?.address
         if (walletAddress) {
           await awardWalletBonus(userId, walletAddress)
@@ -460,43 +451,6 @@ export function ComingSoon() {
     }
   }
 
-  const awardEmailBonus = async (userId: string, email: string) => {
-    try {
-      const response = await fetch('/api/waitlist/bonus/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, email }),
-      })
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        logger.error('Failed to award email bonus', { 
-          userId, 
-          email,
-          status: response.status,
-          errorText 
-        }, 'ComingSoon')
-        return
-      }
-      
-      const result = await response.json()
-      logger.info('Email bonus awarded', { 
-        userId, 
-        awarded: result.awarded,
-        bonusAmount: result.bonusAmount 
-      }, 'ComingSoon')
-      
-      // Refresh position to show updated points
-      await fetchWaitlistPosition(userId)
-    } catch (error) {
-      logger.error('Error awarding email bonus', { 
-        userId, 
-        email,
-        error: error instanceof Error ? error.message : String(error) 
-      }, 'ComingSoon')
-    }
-  }
-
   const awardWalletBonus = async (userId: string, walletAddress: string) => {
     try {
       const response = await fetch('/api/waitlist/bonus/wallet', {
@@ -542,26 +496,6 @@ export function ComingSoon() {
       setTimeout(() => setCopiedCode(false), 2000)
     }
   }, [waitlistData])
-
-  const handleAddEmail = async () => {
-    if (!emailInput || !dbUser?.id) return
-    setIsLoading(true)
-    try {
-      await awardEmailBonus(dbUser.id, emailInput)
-      setShowEmailModal(false)
-      setEmailInput('')
-      await refresh()
-      await fetchWaitlistPosition(dbUser.id)
-      toast.success('Email added! +25 points')
-    } catch (error) {
-      logger.error('Error adding email', { 
-        error: error instanceof Error ? error.message : String(error) 
-      }, 'ComingSoon')
-      toast.error('Failed to add email')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleSaveProfile = async () => {
     if (!dbUser?.id) return
@@ -703,10 +637,9 @@ export function ComingSoon() {
             <div className="mb-8 sm:mb-16 animate-fadeIn animation-delay-200 px-4 relative z-20">
               <button
                 onClick={handleJoinWaitlist}
-                disabled={isLoading}
                 className="group relative w-full sm:w-auto px-10 sm:px-12 py-5 sm:py-6 bg-primary hover:bg-primary/90 text-primary-foreground text-xl sm:text-2xl font-bold rounded-none skew-x-[-10deg] shadow-[0_0_20px_rgba(var(--primary),0.4)] hover:shadow-[0_0_40px_rgba(var(--primary),0.6)] hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 overflow-hidden"
               >
-                <span className="relative z-10 inline-block skew-x-[10deg]">{isLoading ? 'Loading...' : 'Join Waitlist'}</span>
+                <span className="relative z-10 inline-block skew-x-[10deg]">Join Waitlist</span>
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
               </button>
               <p className="mt-4 text-sm text-muted-foreground/80 animate-pulse">
@@ -1105,10 +1038,9 @@ export function ComingSoon() {
                 {/* Join Waitlist */}
                 <button 
                   onClick={handleJoinWaitlist}
-                  disabled={isLoading}
                   className="group p-6 sm:p-8 md:p-10 bg-primary border border-primary/20 rounded-none hover:bg-primary/90 active:scale-95 transition-all duration-300 text-center backdrop-blur-md touch-manipulation shadow-[0_0_20px_rgba(var(--primary),0.2)] hover:shadow-[0_0_40px_rgba(var(--primary),0.4)] disabled:opacity-50"
                 >
-                  <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-primary-foreground group-hover:text-white transition-colors">{isLoading ? 'Loading...' : 'Join Waitlist'}</h3>
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3 text-primary-foreground group-hover:text-white transition-colors">Join Waitlist</h3>
                   <p className="text-sm sm:text-base text-primary-foreground/80 leading-relaxed">Start competing now</p>
                 </button>
 
@@ -1681,40 +1613,6 @@ export function ComingSoon() {
                       <span className="text-green-500 font-bold text-sm">+{POINTS.WALLET_CONNECT}</span>
                     </div>
                   )}
-
-                  {/* Email Bonus */}
-                  {(() => {
-                    const googleEmail = privyUser && 'google' in privyUser ? (privyUser as { google?: { email?: string } }).google?.email : undefined
-                    const emailFromOAuth = privyUser?.email?.address || googleEmail
-                    const hasEmail = !!emailFromOAuth
-                    const emailBonusAwarded = dbUser?.pointsAwardedForEmail ?? false
-                    
-                    return !emailBonusAwarded && !hasEmail ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          setShowEmailModal(true)
-                        }}
-                        className="w-full flex items-center justify-between bg-background/50 hover:bg-background active:scale-[0.98] border border-border rounded-lg p-3 sm:p-4 transition-all duration-200 hover:border-primary/30 touch-manipulation min-h-[48px] cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
-                          <span className="font-semibold text-sm">Add Email</span>
-                        </div>
-                        <span className="text-primary font-bold text-sm">+25</span>
-                      </button>
-                    ) : (
-                      <div className="w-full flex items-center justify-between bg-green-500/10 border border-green-500/20 rounded-lg p-3 sm:p-4">
-                        <div className="flex items-center gap-3">
-                          <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-500 shrink-0" />
-                          <span className="font-semibold text-sm">Email Added</span>
-                        </div>
-                        <span className="text-green-500 font-bold text-sm">+25</span>
-                      </div>
-                    )
-                  })()}
                 </div>
               </div>
             </div>
@@ -1860,73 +1758,6 @@ export function ComingSoon() {
           </div>
         </div>
       </section>
-
-      {/* Email Modal */}
-      {showEmailModal && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/70 z-50 backdrop-blur-sm transition-opacity duration-300"
-            onClick={() => !isLoading && setShowEmailModal(false)}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <div 
-              className="bg-background border border-border rounded-lg shadow-xl w-full max-w-md my-8 transition-all duration-300"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-border">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Mail className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold">Add Email Address</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Earn <span className="font-semibold text-primary">+25 points</span>
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowEmailModal(false)}
-                  disabled={isLoading}
-                  className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <form 
-                onSubmit={(e) => { e.preventDefault(); handleAddEmail(); }} 
-                className="p-6 space-y-6"
-              >
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium">Email Address</label>
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="your.email@example.com"
-                    className="w-full px-3 py-2 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
-                    disabled={isLoading}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Get notified when Babylon launches
-                  </p>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!emailInput || isLoading}
-                  className="w-full px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold min-h-[44px]"
-                >
-                  {isLoading ? 'Adding...' : 'Add Email & Earn Points'}
-                </button>
-              </form>
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Profile Completion Modal */}
       {showProfileModal && (

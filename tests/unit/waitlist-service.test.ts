@@ -729,40 +729,6 @@ describeWaitlist('WaitlistService', () => {
     })
 
     describe('bonuses', () => {
-      it('should award email bonus only once', async () => {
-      if (!prismaModelsAvailable) return;
-        const user = await prisma.user.create({
-          data: {
-            id: await generateSnowflakeId(),
-            privyId: `test-email-${Date.now()}`,
-            username: `useremail${Date.now()}`,
-            displayName: 'Test Email User',
-            reputationPoints: 100,
-            bonusPoints: 0,
-            isTest: true,
-            updatedAt: new Date(),
-          },
-        })
-        testUserIds.push(user.id)
-
-        // Award first time
-        const awarded1 = await WaitlistService.awardEmailBonus(user.id, 'test@example.com')
-        expect(awarded1).toBe(true)
-
-        // Try to award again
-        const awarded2 = await WaitlistService.awardEmailBonus(user.id, 'test2@example.com')
-        expect(awarded2).toBe(false) // Should not award twice
-
-        // Verify only 25 points awarded
-        const updatedUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { bonusPoints: true, reputationPoints: true },
-        })
-
-        expect(updatedUser?.bonusPoints).toBe(25)
-        expect(updatedUser?.reputationPoints).toBe(125) // 100 + 25
-      })
-
       it('should award wallet bonus only once', async () => {
       if (!prismaModelsAvailable) return;
         const user = await prisma.user.create({
